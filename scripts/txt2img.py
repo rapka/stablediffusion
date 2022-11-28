@@ -18,6 +18,7 @@ from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 from ldm.models.diffusion.dpm_solver import DPMSolverSampler
 
+torch.cuda.empty_cache()
 torch.set_grad_enabled(False)
 
 def chunk(it, size):

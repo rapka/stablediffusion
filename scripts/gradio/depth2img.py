@@ -23,6 +23,7 @@ def initialize_model(config, ckpt):
 
     device = torch.device(
         "cuda") if torch.cuda.is_available() else torch.device("cpu")
+    print(f'Using CUDA: "{torch.cuda.is_available()}"')
     model = model.to(device)
     sampler = DDIMSampler(model)
     return sampler
@@ -57,6 +58,7 @@ def paint(sampler, image, prompt, t_enc, seed, scale, num_samples=1, callback=No
     device = torch.device(
         "cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = sampler.model
+    print(f'Using CUDA: "{torch.cuda.is_available()}"')
     seed_everything(seed)
 
     print("Creating invisible watermark encoder (see https://github.com/ShieldMnt/invisible-watermark)...")
@@ -121,6 +123,7 @@ def pad_image(input_image):
 
 
 def predict(input_image, prompt, steps, num_samples, scale, seed, eta, strength):
+    torch.cuda.empty_cache()
     init_image = input_image.convert("RGB")
     image = pad_image(init_image)  # resize to integer multiple of 32
 
