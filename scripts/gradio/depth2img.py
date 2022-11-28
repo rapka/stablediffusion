@@ -1,4 +1,5 @@
 import sys
+import random
 import torch
 import numpy as np
 import gradio as gr
@@ -111,7 +112,12 @@ def paint(sampler, image, prompt, t_enc, seed, scale, num_samples=1, callback=No
         x_samples_ddim = model.decode_first_stage(samples)
         result = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
         result = result.cpu().numpy().transpose(0, 2, 3, 1) * 255
-    return [depth_image] + [put_watermark(Image.fromarray(img.astype(np.uint8)), wm_encoder) for img in result]
+
+    outputFilename = f'{seed}-{num_samples}.png'
+    print(f'Saving {outputFilename} to disk...')
+    Image.fromarray(img.astype(np.uint8)).save(os.path.join('outputs/depth2img', outputFilename)) for img in result
+
+    return [put_watermark(Image.fromarray(img.astype(np.uint8))) for img in result]
 
 
 def pad_image(input_image):
@@ -144,6 +150,27 @@ def predict(input_image, prompt, steps, num_samples, scale, seed, eta, strength)
     )
     return result
 
+def predictLoop(input_image, prompt, steps, num_samples, scale, seed, eta, strength):
+    torch.cuda.empty_cache()
+    results = [];
+    for i in range(num_samples):
+        print(f'Creating image{i} of {num_samples}')
+        result = predict(
+            input_image=input_image,
+            prompt=prompt,
+            steps=steps,
+            num_samples=1,
+            scale=scale,
+            seed=random.randint(0, 2147483647),
+            eta=eta,
+            strength=strength
+        )
+
+        results = results + result
+
+    return results
+
+
 
 sampler = initialize_model(sys.argv[1], sys.argv[2])
 
@@ -159,11 +186,11 @@ with block:
             run_button = gr.Button(label="Run")
             with gr.Accordion("Advanced options", open=False):
                 num_samples = gr.Slider(
-                    label="Images", minimum=1, maximum=4, value=1, step=1)
+                    label="Images", minimum=1, maximum=100, value=2, step=1)
                 ddim_steps = gr.Slider(label="Steps", minimum=1,
-                                       maximum=50, value=50, step=1)
+                                       maximum=50, value=5, step=1)
                 scale = gr.Slider(
-                    label="Guidance Scale", minimum=0.1, maximum=30.0, value=9.0, step=0.1
+                    label="Guidance Scale", minimum=0.1, maximum=30.0, value=20.0, step=0.1
                 )
                 strength = gr.Slider(
                     label="Strength", minimum=0.0, maximum=1.0, value=0.9, step=0.01
@@ -180,7 +207,7 @@ with block:
             gallery = gr.Gallery(label="Generated images", show_label=False).style(
                 grid=[2], height="auto")
 
-    run_button.click(fn=predict, inputs=[
+    run_button.click(fn=predictLoop, inputs=[
                      input_image, prompt, ddim_steps, num_samples, scale, seed, eta, strength], outputs=[gallery])
 
 
