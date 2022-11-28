@@ -1,0 +1,8 @@
+outputs
+ldm
+midas_models
+scripts/__pycache__
+stable_diffusion.egg-info
+
+# model files
+*.ckpt
